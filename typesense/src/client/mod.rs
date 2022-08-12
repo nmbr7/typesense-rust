@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use http::Response;
 
-use crate::collection::CollectionClient;
+use crate::collection::{CollectionClient, CollectionsClient};
 use crate::transport::HttpLowLevel;
 use crate::transport::Transport;
 use crate::Result;
@@ -40,10 +40,19 @@ where
             client: self.clone(),
         }
     }
-    /// Creates a [`CollectionClient`] to interact with the Typesense Collection API
-    pub fn collection(&self) -> CollectionClient<T> {
+
+    /// Creates a [`Collections`] type to interact with the Typesense Collection API
+    pub fn collections(&self) -> CollectionsClient<T> {
+        CollectionsClient {
+            client: self.clone(),
+        }
+    }
+
+    /// Creates a [`Collection`] type to interact with the Typesense Collection API
+    pub fn collection<'a>(&self, collection_name: &'a str) -> CollectionClient<'a, T> {
         CollectionClient {
             client: self.clone(),
+            collection_name,
         }
     }
 }
@@ -71,6 +80,10 @@ where
 
     pub(crate) async fn post(&self, path: &str, body: Vec<u8>) -> Result<Response<Vec<u8>>> {
         self.send(http::Method::POST, path, body).await
+    }
+    
+    pub(crate) async fn patch(&self, path: &str, body: Vec<u8>) -> Result<Response<Vec<u8>>> {
+        self.send(http::Method::PATCH, path, body).await
     }
 
     pub(crate) async fn delete(&self, path: &str) -> Result<Response<Vec<u8>>> {

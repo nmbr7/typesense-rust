@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use typesense::document::Document as DocumentTrait;
+use typesense::document_trait::Document as DocumentTrait;
 use typesense::Document;
 
 #[test]

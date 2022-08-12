@@ -27,6 +27,17 @@ fn impl_typesense_collection(item: ItemStruct) -> syn::Result<TokenStream> {
             "Document derive macro only can be used on structs with named fields.",
         ));
     };
+    
+    // if !fields.iter().any(|field|
+    //             // At this point we are sure that this field is a named field.
+    //             field.ident.as_ref().unwrap().to_string() == "id".to_string())
+    // {
+    //     return Err(syn::Error::new_spanned(
+    //         &item,
+    //         "id field not found for the given struct",
+    //     ));
+    // }
+
 
     if let Some(ref sorting_field) = default_sorting_field {
         if !fields.iter().any(|field|
@@ -42,11 +53,12 @@ fn impl_typesense_collection(item: ItemStruct) -> syn::Result<TokenStream> {
 
     let typesense_fields = fields
         .iter()
+        //.filter(|field| field.ident.as_ref().unwrap().to_string() != "id")
         .map(to_typesense_field_type)
         .collect::<syn::Result<Vec<_>>>()?;
 
     let gen = quote! {
-        impl  #impl_generics  typesense::document::Document for #name #ty_generics #where_clause {
+        impl  #impl_generics  typesense::document_trait::Document for #name #ty_generics #where_clause {
             fn collection_schema() -> typesense::collection::CollectionSchema {
                 let name = #collection_name.to_string();
 
@@ -63,6 +75,7 @@ fn impl_typesense_collection(item: ItemStruct) -> syn::Result<TokenStream> {
             }
         }
     };
+    
     Ok(gen.into())
 }
 
@@ -370,7 +383,7 @@ fn to_typesense_field_type(field: &Field) -> syn::Result<proc_macro2::TokenStrea
         if facet_count == 1 {
             quote!(Some(true))
         } else if facet_count == 0 {
-            quote!(None)
+            quote!(Some(false))
         } else {
             return Err(syn::Error::new_spanned(
                 field,
@@ -382,7 +395,7 @@ fn to_typesense_field_type(field: &Field) -> syn::Result<proc_macro2::TokenStrea
     let (ty, optional) = if let Some(inner_ty) = ty_inner_type(&field.ty, "Option") {
         (inner_ty, quote!(Some(true)))
     } else {
-        (&field.ty, quote!(None))
+        (&field.ty, quote!(Some(false)))
     };
     let typesense_field_type = quote!(
             <#ty as typesense::field::ToTypesenseField>::to_typesense_type().to_string()
@@ -393,6 +406,10 @@ fn to_typesense_field_type(field: &Field) -> syn::Result<proc_macro2::TokenStrea
             .typesense_type(#typesense_field_type)
             .optional(#optional)
             .facet(#facet)
+            .index(Some(true)) // need to make configurable
+            .locale(Some("".to_string()))
+            .sort(Some(true))
+            .infix(Some(false))
             .build()
             .unwrap()
     })

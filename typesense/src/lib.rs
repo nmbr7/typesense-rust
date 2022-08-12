@@ -11,6 +11,7 @@ pub use typesense_codegen as openapi_client;
 mod client;
 pub mod collection;
 pub mod document;
+pub mod document_trait;
 mod error;
 pub mod field;
 pub mod transport;
